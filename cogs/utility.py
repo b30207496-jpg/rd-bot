@@ -58,6 +58,77 @@ class Utility(commands.Cog):
         await self.bot.db.set_setting(interaction.guild.id, f"afk:{interaction.user.id}", message)
         await interaction.response.send_message(f"💤 AFK set: {message}")
 
+    @app_commands.command(name="ping", description="Check the bot's latency")
+    async def ping(self, interaction: discord.Interaction):
+        latency = round(self.bot.latency * 1000)
+        await interaction.response.send_message(
+            f"🏓 Pong! **{latency}ms**"
+        )
 
+    @app_commands.command(name="botinfo", description="Show bot information")
+    async def botinfo(self, interaction: discord.Interaction):
+        embed = discord.Embed(
+            title="🤖 Bot Information",
+            color=discord.Color.blurple()
+        )
+
+        embed.add_field(
+            name="Bot",
+            value=str(self.bot.user),
+            inline=True
+        )
+        embed.add_field(
+            name="Servers",
+            value=str(len(self.bot.guilds)),
+            inline=True
+        )
+        embed.add_field(
+            name="Commands",
+            value=str(len(self.bot.tree.get_commands())),
+            inline=True
+        )
+
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="roleinfo", description="Show role information")
+    async def roleinfo(
+        self,
+        interaction: discord.Interaction,
+        role: discord.Role
+    ):
+        embed = discord.Embed(
+            title=f"🎭 Role Info — {role.name}",
+            color=role.color
+        )
+
+        embed.add_field(name="ID", value=str(role.id))
+        embed.add_field(name="Members", value=str(len(role.members)))
+        embed.add_field(name="Position", value=str(role.position))
+        embed.add_field(name="Mentionable", value=str(role.mentionable))
+
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(
+        name="channelinfo",
+        description="Show channel information"
+    )
+    async def channelinfo(self, interaction: discord.Interaction):
+        channel = interaction.channel
+
+        embed = discord.Embed(
+            title=f"📺 Channel Info — {channel.name}",
+            color=discord.Color.blurple()
+        )
+
+        embed.add_field(name="ID", value=str(channel.id))
+        embed.add_field(name="Type", value=str(channel.type))
+
+        if hasattr(channel, "category") and channel.category:
+            embed.add_field(
+                name="Category",
+                value=channel.category.name
+            )
+
+        await interaction.response.send_message(embed=embed)
 async def setup(bot):
     await bot.add_cog(Utility(bot))
