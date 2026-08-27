@@ -64,6 +64,100 @@ class Economy(commands.Cog):
         text = "\n".join(f"**{i}.** <@{r['user_id']}> — `{r['balance']:,}`" for i, r in enumerate(rows, 1)) or "No data yet."
         await interaction.response.send_message(f"🏆 **Economy Leaderboard**\n{text}")
 
+    @app_commands.command(
+        name="deposit",
+        description="Deposit coins into your bank"
+    )
+    async def deposit(
+        self,
+        interaction: discord.Interaction,
+        amount: app_commands.Range[int, 1, 1000000]
+    ):
+        gid = interaction.guild.id
+        uid = interaction.user.id
 
+        await self.ensure(gid, uid)
+
+        row = await self.bot.db.fetchone(
+            "SELECT balance FROM economy WHERE guild_id=? AND user_id=?",
+            (gid, uid)
+        )
+
+        balance = row["balance"]
+
+        if amount > balance:
+            return await interaction.response.send_message(
+                "❌ You don't have enough coins.",
+                ephemeral=True
+            )
+
+        await self.bot.db.execute(
+            "UPDATE economy SET balance=balance-? "
+            "WHERE guild_id=? AND user_id=?",
+            (amount, gid, uid)
+        )
+
+        await interaction.response.send_message(
+            f"🏦 Deposited **{amount:,} coins**."
+        )
+
+    @app_commands.command(
+        name="withdraw",
+        description="Withdraw coins from your bank"
+    )
+    async def withdraw(
+        self,
+        interaction: discord.Interaction,
+        amount: app_commands.Range[int, 1, 1000000]
+    ):
+        gid = interaction.guild.id
+        uid = interaction.user.id
+
+        await self.ensure(gid, uid)
+
+        await interaction.response.send_message(
+            f"💰 Withdrew **{amount:,} coins** from your bank."
+        )
+
+    @app_commands.command(
+        name="richest",
+        description="Show the richest members"
+    )
+    async def richest(self, interaction: discord.Interaction):
+        rows = await self.bot.db.fetchall(
+            """
+            SELECT user_id, balance
+            FROM economy
+            WHERE guild_id=?
+            ORDER BY balance DESC
+            LIMIT 10
+            """,
+            (interaction.guild.id,)
+        )
+
+        if not rows:
+            return await interaction.response.send_message(
+                "💰 Nobody has any coins yet!"
+            )
+
+        lines = []
+
+        for index, row in enumerate(rows, start=1):
+            user = self.bot.get_user(row["user_id"])
+
+            name = user.display_name if user else f"User {row['user_id']}"
+
+            lines.append(
+                f"**{index}.** {name} — "
+                f"💰 **{row['balance']:,}**"
+            )
+
+        embed = discord.Embed(
+            title="🏆 Richest Members",
+            description="\n".join(lines),
+            color=discord.Color.gold()
+        )
+
+        await interaction.response.send_message(embed=embed)
 async def setup(bot):
     await bot.add_cog(Economy(bot))
