@@ -6,15 +6,27 @@ import time
 
 
 class HelpView(discord.ui.View):
-    def __init__(self, pages):
+    def __init__(self, pages, user):
         super().__init__(timeout=300)
         self.pages = pages
+        self.user = user
         self.current_page = 0
+        self.message = None
         self.update_buttons()
 
     def update_buttons(self):
         self.previous.disabled = self.current_page == 0
         self.next.disabled = self.current_page >= len(self.pages) - 1
+
+    async def interaction_check(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user.id:
+            await interaction.response.send_message(
+                "❌ This help menu isn't yours.",
+                ephemeral=True
+            )
+            return False
+
+        return True
 
     @discord.ui.button(
         label="Previous",
@@ -56,7 +68,15 @@ class HelpView(discord.ui.View):
             view=self
         )
 
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
 
+        if self.message:
+            try:
+                await self.message.edit(view=self)
+            except discord.NotFound:
+                pass
 class Core(commands.Cog):
 
     def __init__(self, bot):
@@ -268,13 +288,14 @@ class Core(commands.Cog):
 
             pages.append(embed)
 
-        view = HelpView(pages)
+        view = HelpView(pages, interaction.user)
 
         # PUBLIC help message
         await interaction.response.send_message(
-            embed=pages[0],
-            view=view
-        )
+    embed=pages[0],
+    view=view
+)
+
 
 
 async def setup(bot):
